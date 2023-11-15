@@ -1,0 +1,107 @@
+import email
+import getpass
+import imaplib
+import os
+import sys
+import time
+from Cfg import *
+
+class App:
+	def __init__(self,emailAcc):
+		self.tmr = loopMins * 60 / intervalSecs
+		self.userName = emailAcc[0]
+		self.passwd = emailAcc[1]
+		self.directory = os.getcwd()#'C:/Users/AREN04/Desktop/AutoSBLUpload'
+		self.folder = 'SBLList'
+		if self.folder not in os.listdir(self.directory):
+			os.mkdir(self.directory + '/' + self.folder)
+		self.imapSess = self.LoginGmail()
+		self.countdown()
+
+
+	def Run(self):
+		# Run loop
+		self.loop.Run()
+
+
+	def LoginGmail(self):
+		try:
+			print 'setting session'
+			imapSession = imaplib.IMAP4_SSL('imap.gmail.com')
+			print 'setting account details'
+			typ, accountDetails = imapSession.login(self.userName, self.passwd)
+			print 'done'
+			if typ != 'OK':
+				print 'Not able to sign in!'
+				raise
+			print 'Signed in...'
+			return imapSession
+		except imapSession.error, e:
+			print 'Not able to sign in!', e
+			quit()
+
+
+	def DownloadMail(self):
+		try:
+			self.imapSess.select('[Gmail]/All Mail')
+			print 'Select mailbox'
+			typ, data = self.imapSess.search(None, '(SUBJECT "SBL ' + time.strftime("%d%m%y") + ' upload")')
+			print 'Search inbox'
+			if typ != 'OK':
+				print 'Error searching Inbox.'
+				raise
+			print 'Searching Inbox...'
+
+			print self.tmr
+			msges = data[0].split()
+			if len(msges) == 0:
+				print 'No Email Received.'
+				return
+			print len(msges)
+			msgId = msges[len(msges)-1]
+			print msgId
+			print data
+			print time.strftime("%d%m%y")
+			typ, messageParts = self.imapSess.fetch(msgId, '(RFC822)')
+			if typ != 'OK':
+				print 'Error fetching mail.'
+				raise
+			print 'Mail fetched'
+
+			emailBody = messageParts[0][1]
+			mail = email.message_from_string(emailBody)
+			for part in mail.walk():
+				if part.get_content_maintype() == 'multipart':
+					continue
+				if part.get('Content-Disposition') is None:
+					continue
+				fileName = part.get_filename()
+
+				if bool(fileName):
+					filePath = os.path.join(self.directory, self.folder, fileName)
+					if os.path.exists(filePath):
+						os.remove(filePath)
+					if not os.path.isfile(filePath) :
+						print fileName
+						fp = open(filePath, 'wb')
+						fp.write(part.get_payload(decode=True))
+						fp.close()
+			self.imapSess.close()
+			self.imapSess.logout()
+			print 'Done'
+			quit()
+		except self.imapSess.error, e:
+			print 'Not able to download all attachments.', e
+
+
+	def countdown(self):
+		while self.tmr:
+			self.DownloadMail()
+			time.sleep(intervalSecs)
+			self.tmr -= 1
+		quit()
+
+
+if __name__ == '__main__':
+	app = App(sendEmailAcc)
+	app.Run()
