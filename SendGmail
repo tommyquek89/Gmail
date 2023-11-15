@@ -1,0 +1,48 @@
+import csv
+import os
+import sys
+import collections
+import smtplib
+from email.MIMEBase import MIMEBase
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email import Encoders
+import time
+import os.path
+from os.path import basename
+
+fileName = 'FILE_' + time.strftime("%d%m%y") + '.csv' 
+f = 'Sent/' + fileName
+if not os.path.exists(f):
+	quit()
+
+me = "YOUR_EMAIL@gmail.com"
+passwd = "YOUR_PASSWORD"
+emailList = ["EMAIL1@xyz.com","EMAIL2@abc.com"] # No restriction on email domain
+text = 'Please find file attached.'
+
+# Create the container (outer) email message.
+msg = MIMEMultipart()
+
+msg['Subject'] = 'Daily Report ' + time.strftime("%d%m%y")
+msg.attach(MIMEText(text))
+# me == the sender's email address
+# emailList = the list of all recipients' email addresses
+msg['From'] = me
+msg['To'] = ', '.join(emailList)
+
+mail_file = MIMEBase('application', 'csv')
+mail_file.set_payload(open(f, 'rb').read())
+mail_file.add_header('Content-Disposition', 'attachment; filename=' + fileName)
+Encoders.encode_base64(mail_file)
+msg.attach(mail_file)
+
+# Send the email via our own SMTP server.
+s = smtplib.SMTP('smtp.gmail.com', 587)
+s.ehlo()
+s.starttls()
+s.login(me, passwd)
+s.sendmail(me, emailList, msg.as_string())
+s.quit()
+s.close()
