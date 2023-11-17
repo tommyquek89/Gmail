@@ -4,15 +4,17 @@ import imaplib
 import os
 import sys
 import time
-from Cfg import *
 
 class App:
-	def __init__(self,emailAcc):
-		self.tmr = loopMins * 60 / intervalSecs
-		self.userName = emailAcc[0]
-		self.passwd = emailAcc[1]
-		self.directory = os.getcwd()#'C:/Users/AREN04/Desktop/AutoSBLUpload'
-		self.folder = 'SBLList'
+	def __init__(self):
+		self.intervalSecs = 10 # reading mail every 10s
+		self.loopMins = 15  # 15mins waiting for the report to be sent
+		self.tmr = self.loopMins * 60 / self.intervalSecs
+		self.userName = YOUR_EMAIL@gmail.com
+		self.passwd = YOUR_PASSWORD
+		self.directory = os.getcwd()
+		self.folder = 'YOUR_FOLDER'
+		self.subject = '(SUBJECT "Daily ' + time.strftime("%d%m%y") + ' Report")' # subject will look like "Daily 01012023 Report"
 		if self.folder not in os.listdir(self.directory):
 			os.mkdir(self.directory + '/' + self.folder)
 		self.imapSess = self.LoginGmail()
@@ -45,7 +47,7 @@ class App:
 		try:
 			self.imapSess.select('[Gmail]/All Mail')
 			print 'Select mailbox'
-			typ, data = self.imapSess.search(None, '(SUBJECT "SBL ' + time.strftime("%d%m%y") + ' upload")')
+			typ, data = self.imapSess.search(None, self.subject)
 			print 'Search inbox'
 			if typ != 'OK':
 				print 'Error searching Inbox.'
@@ -97,11 +99,11 @@ class App:
 	def countdown(self):
 		while self.tmr:
 			self.DownloadMail()
-			time.sleep(intervalSecs)
+			time.sleep(self.intervalSecs)
 			self.tmr -= 1
 		quit()
 
 
 if __name__ == '__main__':
-	app = App(sendEmailAcc)
+	app = App()
 	app.Run()
